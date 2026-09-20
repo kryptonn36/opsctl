@@ -4,5 +4,5 @@ import "github.com/kryptonn36/opsctl/cmd"
 
 
 func main(){
-	cmd.Execute()
+	cmd.Excute()
 }
