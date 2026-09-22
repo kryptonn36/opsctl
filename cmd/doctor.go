@@ -3,7 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net"
+	"os"
 	"os/exec"
+	"time"
 
 	"github.com/moby/moby/client"
 	"github.com/spf13/cobra"
@@ -34,7 +37,12 @@ var doctorCmd = &cobra.Command{
 		if CheckDockerDeamon(){
 			fmt.Println("docker deamon is running")
 		}else{
-			fmt.Println("docker deamon is not running")
+			fmt.Println("Docker deamon is not running")
+		}
+		if CheckPostgres(){
+			fmt.Println("Postgres is running")
+		}else{
+			fmt.Println("Postgres is not connected")
 		}
 		return nil
 	},
@@ -50,12 +58,42 @@ func CheckBinaries(bin string) error{
 }
 
 func CheckDockerDeamon() bool{
-	cli, err  := client.New(client.FromEnv)
-	if err != nil {
+	ctx, cancle := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancle()
+
+	if pingOk(ctx, client.FromEnv){
+		return true
+	}
+
+	home, err := os.UserHomeDir()
+	if err == nil{
+		socketHost := "unix:///"+ home + "/.docker/desktop/docker.sock"
+		if pingOk(ctx, client.WithHost(socketHost)){
+			return true
+		}
+	}
+	return false
+}
+
+func pingOk(ctx context.Context, opt client.Opt) bool {
+	cli, err := client.New(opt)
+	if err != nil{
 		return false
 	}
-	defer cli.Close()
 
-	_, err = cli.Ping(context.Background(), client.PingOptions{})
+	_, err = cli.Ping(ctx, client.PingOptions{})
 	return err == nil
+}
+
+func CheckPostgres() bool{
+	target := "localhost:5433"
+
+	conn, err := net.DialTimeout("tcp", target, 2*time.Second)
+	if err != nil {
+		return false
+	}else{
+		_ = conn.Close()
+		return true
+	}
+
 }
