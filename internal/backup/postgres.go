@@ -100,6 +100,7 @@ func Run(ctx context.Context, cfg Config) error{
 
 	success = true
 
-	fmt.Printf("Backup created: %w", outputPath)
+	fmt.Printf("Backup created: %s", outputPath)
 	return nil
 }
+
